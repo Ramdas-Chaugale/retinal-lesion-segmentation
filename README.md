@@ -15,25 +15,48 @@ ideas expected to improve on that did not, and the repository reports why.
 
 ---
 
-## See it work in one second
+## Introduction
 
-```
-pip install -r requirements.txt
-python code/verify_numbers.py
-```
+Optical coherence tomography produces cross-sectional images of the retina, and in preclinical
+research it is used to track how a retinal injury develops over time. A common experimental model
+induces small, controlled lesions with a laser, then images the same eyes at intervals to measure
+how each lesion changes.
 
-No data needed, no GPU, no download. It recomputes Dice, precision, recall and IoU for all twenty
-configurations from the stored per-image scores, checks every one against `results/NUMBERS.txt`,
-and reproduces the fragmentation counts.
+Measuring them is the slow part. A scientist opens each scan and outlines every lesion by hand, one
+at a time. The work is repetitive, it takes hours, and two people outlining the same lesion will
+not produce the same boundary. That variability is not only an inconvenience: it widens the spread
+of the measurements, which means a study needs more animals to detect the same effect.
 
-```
-ALL CHECKS PASSED
-  20 configurations reproduce Dice, precision, recall and IoU
-  fragmentation counts reproduce for every model at both input sizes
-  post-processing leaves 0 fragmented predictions in all 10 configurations
-```
+This project replaces that manual step with a segmentation model that outlines the lesions
+automatically, and treats the choice of model as a question to be answered rather than assumed.
+Five designs are compared under identical conditions: a standard U-Net, a version that also
+receives a reconstruction residual as a second input, two built on a pretrained retinal foundation
+model at a quarter of the parameters, and one trained with a connectivity penalty in its loss.
 
-Every number quoted below comes out of that script. None of them is typed in by hand.
+The honest answer is that the differences between most of them are smaller than the noise, and this
+repository says so and shows the arithmetic. Two of the ideas that were expected to help did not,
+and both are reported with the measurements that show why.
+
+## How it works
+
+![Method pipeline](figures/pipeline.png)
+
+Two inputs are prepared. A reconstruction model is fine-tuned on healthy baseline scans, and the
+difference between a lesioned scan and its reconstruction becomes a residual: a map of where the
+retina departs from what a healthy retina should look like. That residual is offered to the models
+as a second input channel alongside the image itself.
+
+Expert outlines are filled to produce binary masks. All five models then train on the same split,
+and each is scored on the same 15 held-out scans, per image rather than averaged early.
+
+## The five models
+
+![The five model architectures](figures/architectures.png)
+
+The skeleton is the same throughout, an encoder-decoder segmentation network. Three things vary:
+whether the input is the image alone or the image plus its residual, whether the encoder is
+randomly initialised or taken from the pretrained reconstruction model, and whether the loss
+includes a connectivity penalty.
 
 ## Results
 
@@ -54,7 +77,33 @@ Worth noting the third row: the pretrained encoder reaches 0.809 with **a quarte
 parameters**, 1.98 M against 7.77 M, which matters more than the 0.04 Dice it gives up if this ever
 has to run somewhere small.
 
+![Per-image Dice distributions for all five models](figures/score_distributions.png)
+
+That figure is the most important one here. Each dot is a single held-out scan. The spread within
+any one model is far wider than the gap between models, which is the whole reason this repository
+refuses to declare a winner.
+
 ![Training curves for all five models](figures/03_training_curves_all.png)
+
+## Reproduce every number in this README
+
+```
+pip install -r requirements.txt
+python code/verify_numbers.py
+```
+
+No data, no GPU, no download. It recomputes Dice, precision, recall and IoU for all twenty
+configurations from the stored per-image scores, checks every one against `results/NUMBERS.txt`,
+and reproduces the fragmentation counts.
+
+```
+ALL CHECKS PASSED
+  20 configurations reproduce Dice, precision, recall and IoU
+  fragmentation counts reproduce for every model at both input sizes
+  post-processing leaves 0 fragmented predictions in all 10 configurations
+```
+
+Every number quoted above comes out of that script. None of them is typed in by hand.
 
 ## What the results actually say
 
@@ -78,7 +127,7 @@ not work either, while applying the same idea as post-processing after training 
 A negative result that is measured and explained is worth more than a positive one that is not
 reproducible.
 
-## How it works
+## Design decisions
 
 **Face the problem where it is.** A lesion is a local disruption of retinal layers, so the models
 are ordinary encoder-decoder segmentation networks rather than anything exotic. Two of the five
@@ -108,6 +157,7 @@ code/                     the modules everything else imports
   train.py                  training loop, early stopping, checkpointing
   evaluate.py               per-image scoring
   verify_numbers.py         recomputes every reported number
+  make_figures.py           rebuilds the README figures
 
 notebooks/                the analysis, 02 to 05
 gpu_notebooks/            the three training runs
