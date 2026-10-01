@@ -1,0 +1,21 @@
+# Versions read from the environment that produced the results, on 2026-08-29,
+# not written from memory. Python 3.12.12.
+#
+#   pip install -r requirements.txt
+#
+# Training ran on the Kelvin2 HPC with PyTorch 2.11.0 built against CUDA 12.8.
+# Nothing that is reported needs a GPU: the notebooks and the verification
+# script run on CPU.
+
+torch==2.12.1
+numpy==2.2.6
+opencv-python==4.12.0.88
+pillow==12.1.0
+matplotlib==3.10.8
+pytorch-msssim==1.0.0
+
+# Spatial relation evaluation in notebook 04, Porter et al. IMVIP 2024
+RCC8D==0.0.1
+
+# To open and run the notebooks
+notebook==7.5.2

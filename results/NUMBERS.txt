@@ -1,0 +1,586 @@
+# Canonical Numbers
+
+**Every number here is copied from an executed notebook cell.** If a figure is needed for the
+paper, a slide or a meeting, take it from this file. If a number is not in this file, it has not
+been verified against a current run and must not be used.
+
+Last verified: 2026-08-23, all five notebooks executed on
+Python 3.12 on Windows.
+
+Two training runs exist, identical in every respect except input size. The same 15 validation
+images, seed 40494109, verified file for file.
+
+---
+
+## 1. Dataset
+
+The imaging data used in this study is private and is not distributed with this
+repository. Only the figures the method depends on are recorded here.
+
+| Item | Value |
+|------|-------|
+| Annotated images | 74 |
+| Masks extracted | 74 / 74 |
+| Unique lesions | 37, each scanned in two orthogonal orientations |
+| Image dimensions | 494 x 765 x 3, uint8 |
+| Channels identical (R=G=B) | 74 / 74, largest difference **0** |
+| Single-channel range, mean | 0-255, mean 31.5 |
+| Endpoint images with a matching baseline scan | 74 / 74 |
+| Train / validation split | 59 / 15, seed 42 |
+
+### Annotation extraction
+Threshold R > 200, G > 200, B < 100, then fill the closed contour. On a
+representative scan 2,488 outline pixels become 24,392 filled pixels, 6.45% of
+the frame.
+
+### Two annotation defects, found and corrected 2026-08-28
+The mask-building step applies two corrective rules. Both were prompted by
+defects in the delivered annotations, and each rule fires on exactly one image.
+
+**Open outline.** One drawn stroke has a gap, so `findContours` returns an open
+curve and filling it adds nothing: the stored mask was the 2,255-pixel stroke
+with the lesion interior unlabelled. 99.5% of its occupied columns held two runs
+of white pixels, where all 73 other masks held one. Independently it was the
+only one of 37 orientation pairs disagreeing by more than 2.5x (ratio 0.24).
+Bridging the gap with the smallest closing that shuts the loop (7x7) and filling
+
+### Lesion size, all 74 images
+| Measure | min | mean | median | max | std |
+|---------|-----|------|--------|-----|-----|
+| Lesion pixels | 2,831 | 8,207.69 | 7,261.5 | 32,992 | 4,603.42 |
+| % of whole frame | 0.75 | **2.17** | 1.92 | 8.73 | 1.22 |
+| % of retinal band | 2.12 | **10.92** | 10.37 | 26.77 | 5.07 |
+| Retinal band, % of frame | 13.95 | **20.85** | 17.96 | 48.85 | 7.26 |
+
+Lesion pixels inside the detected band: **100.0%**. Background-to-lesion ratio **46:1**.
+
+### Lesion size by group (% of frame)
+| Group | n | mean | std |
+|-------|---|------|-----|
+| Left eye | 40 | 2.54 | 1.38 |
+| Right eye | 34 | 1.74 | 0.80 |
+| Clock position 3 | 28 | 2.37 | 1.73 |
+| Clock position 9 | 20 | 2.18 | 0.76 |
+| Clock position 12 | 26 | 1.96 | 0.68 |
+| Horizontal scans | 37 | 2.33 | 1.36 |
+| Vertical scans | 37 | 2.02 | 1.04 |
+
+Per-subject lesion sizes are not reported here. Across subjects the group means
+spanned 1.25% to 3.16% of the frame, so lesion size varies more between animals
+than between eyes or scan orientations.
+
+Largest lesions: 8.73% and 6.45% of the frame, both views of the same lesion.
+Smallest: two views of one lesion, both at 0.75%.
+
+---
+
+## 2. Reconstruction and fine-tuning — notebook 02
+
+| Setting | Value |
+|---------|-------|
+| Base model | OCT-F, pretrained on NICOLA human retinal OCT |
+| Parameters | 23,519,257 |
+| Fine-tuned on | 74 QC images; 19 held out, overlap 0 |
+| Input size | 496 x 768 |
+| Batch size | 2 |
+| Optimiser | AdamW, lr 1e-05, weight decay 0.0001 |
+| Scheduler | CosineAnnealingLR |
+| Loss | 0.5 MSE + 0.5 (1 − SSIM) |
+| Max epochs / patience | 50 / 10 |
+| Best epoch / early stop | 31 / 41 |
+
+| Result | Value |
+|--------|-------|
+| Train loss | 0.2828 → 0.1797 |
+| Validation loss | 0.3974 → 0.1901 (best 0.1744) |
+| Train/val SSIM gap, final epoch | 0.0218 |
+| **Held-out SSIM before** | **0.2427** (std 0.0413) |
+| **Held-out SSIM after** | **0.6491** (std 0.0767) |
+| Improvement | **+0.4063** |
+| Per-image held-out range | 0.4051 to 0.7696 |
+| Held-out composition | 7 study A, 12 study B |
+| Held-out SSIM, study A | **0.6739** (n=7) |
+| Held-out SSIM, study B | **0.6346** (n=12) |
+
+### Whole-image SSIM, healthy against diseased
+| Image type | n | mean | std | min | max |
+|------------|---|------|-----|-----|-----|
+| QC, held out, healthy | 19 | 0.6490 | 0.0768 | 0.4047 | 0.7694 |
+| Endpoint, lesion present | 74 | 0.6539 | 0.0880 | 0.3682 | 0.7927 |
+
+Difference **−0.0050**, i.e. −0.8% relative. Whole-image SSIM does not separate healthy from
+diseased scans. 93 reconstructions computed in 232 s.
+
+### Residual contrast, all 74 annotated images
+| Channel | inside lesion | outside | ratio | consistent |
+|---------|---------------|---------|-------|------------|
+| Original image | 0.7337 | 0.1055 | **6.954** | 74/74 |
+| Residual | 0.0535 | 0.0319 | **1.675** | 69/74 |
+
+Residual contrast relative to image contrast: **0.241x**. The residual is lesion-specific but a
+weaker discriminator than the image itself, and is a deterministic function of the image, so it
+adds no new information.
+
+---
+
+## 3. Models — notebook 03
+
+Identical in both runs.
+
+| Model | Params | In | Loss | Learning rate |
+|-------|--------|----|------|---------------|
+| Plain U-Net | 7,765,409 | 1ch | DiceBCELoss | 0.001 |
+| Hybrid U-Net | 7,765,697 | 2ch | DiceBCELoss | 0.001 |
+| OCT-F Backbone | 1,977,633 | 1ch | DiceBCELoss | enc 1e-05 / dec 0.001 |
+| Modified OCT-F 2ch | 1,978,017 | 2ch | DiceBCELoss | enc 1e-05 / dec 0.001 |
+| Soft Erosion Hybrid | 7,765,697 | 2ch | SoftErosionLoss | 0.001 |
+
+Controlled pairs: Plain → Hybrid **+288** params; OCT-F → Modified OCT-F **+384**; Hybrid → Soft
+Erosion **+0**, loss function only.
+
+Shared: batch 4, max 150 epochs, patience 10, ReduceLROnPlateau(patience 5, factor 0.5), split
+59 train / 15 validation, seed 40494109.
+
+Kernels: 256 uses PP 15 and erosion 5; native uses PP 29 and erosion 9.
+
+---
+
+## 4. Training behaviour — notebook 03
+
+Training-loop values, averaged over validation batches. **These drove early stopping; they are
+not the reportable segmentation numbers.** Use section 5 for those.
+
+### 256 x 256
+| Model | Epochs | Best | Stop | Val loss | Val dice | Train dice | Gap | Mins |
+|-------|--------|------|------|----------|----------|------------|-----|------|
+| Plain U-Net | 47 | 37 | 47 | 0.0910 | 0.8395 | 0.8517 | 0.0122 | 0.6 |
+| Hybrid U-Net | 53 | 43 | 53 | 0.0816 | 0.8573 | 0.8782 | 0.0209 | 0.7 |
+| OCT-F Backbone | 66 | 56 | 66 | 0.0921 | 0.8416 | 0.9024 | 0.0608 | 0.6 |
+| Modified OCT-F 2ch | 58 | 48 | 58 | 0.1137 | 0.8062 | 0.9018 | 0.0956 | 0.6 |
+| Soft Erosion Hybrid | 56 | 46 | 56 | 0.0656 | 0.8612 | 0.8883 | 0.0271 | 0.7 |
+
+Total training time **3.1 minutes**.
+
+### Native 496 x 768
+| Model | Epochs | Best | Stop | Val loss | Val dice | Train dice | Gap | Mins |
+|-------|--------|------|------|----------|----------|------------|-----|------|
+| Plain U-Net | 69 | 59 | 69 | 0.0888 | 0.8465 | 0.8864 | 0.0400 | 1.8 |
+| Hybrid U-Net | 46 | 36 | 46 | 0.0907 | 0.8413 | 0.8402 | −0.0010 | 1.2 |
+| OCT-F Backbone | 63 | 53 | 63 | 0.1113 | 0.8075 | 0.8701 | 0.0626 | 1.1 |
+| Modified OCT-F 2ch | 75 | 65 | 75 | 0.1262 | 0.7908 | 0.9289 | 0.1381 | 1.4 |
+| Soft Erosion Hybrid | 67 | 57 | 67 | 0.0738 | 0.8430 | 0.8686 | 0.0256 | 1.8 |
+
+Total training time **7.2 minutes**. Early stopping fired for all ten runs (stop = best + 10), so
+every result is converged.
+
+---
+
+## 5. Segmentation quality — notebook 04
+
+**These are the reportable numbers.** Per-image hard Dice after thresholding at 0.5,
+macro-averaged over the 15 held-out images.
+
+### 256 x 256
+| Configuration | In | Dice | Std | IoU | Prec | Recall | CC>1 | Missed % | Extra % | Min | Max |
+|---------------|----|------|-----|-----|------|--------|------|----------|---------|-----|-----|
+| **Soft Erosion Hybrid + PP** | 2ch | **0.867** | 0.060 | 0.770 | 0.877 | 0.873 | 0/15 | 12.7 | 13.2 | 0.678 | 0.924 |
+| Soft Erosion Hybrid | 2ch | 0.866 | 0.059 | 0.769 | 0.877 | 0.871 | 1/15 | 12.9 | 13.2 | 0.678 | 0.924 |
+| Hybrid U-Net + PP | 2ch | 0.863 | **0.046** | 0.762 | **0.882** | 0.861 | 0/15 | 13.9 | 13.0 | 0.730 | 0.917 |
+| Hybrid U-Net | 2ch | 0.863 | 0.046 | 0.762 | 0.882 | 0.860 | 0/15 | 14.0 | 12.8 | 0.730 | 0.917 |
+| OCT-F Backbone + PP | 1ch | 0.862 | 0.055 | 0.761 | 0.866 | 0.875 | 0/15 | 12.5 | 14.9 | 0.677 | 0.924 |
+| OCT-F Backbone | 1ch | 0.857 | 0.054 | 0.753 | 0.857 | 0.874 | 3/15 | 12.6 | 16.1 | 0.677 | 0.923 |
+| Plain U-Net + PP | 1ch | 0.851 | 0.050 | 0.745 | 0.846 | **0.880** | 0/15 | 12.0 | 18.6 | 0.713 | 0.899 |
+| Plain U-Net | 1ch | 0.850 | 0.051 | 0.743 | 0.846 | 0.877 | 1/15 | 12.3 | 18.6 | 0.713 | 0.898 |
+| Modified OCT-F 2ch | 2ch | 0.823 | 0.098 | 0.710 | 0.856 | 0.826 | 4/15 | 17.4 | 16.2 | 0.492 | 0.924 |
+| Modified OCT-F 2ch + PP | 2ch | 0.821 | 0.117 | 0.710 | 0.864 | 0.822 | 0/15 | 17.8 | 15.4 | 0.409 | 0.924 |
+
+### Native 496 x 768
+| Configuration | In | Dice | Std | IoU | Prec | Recall | CC>1 | Missed % | Extra % | Min | Max |
+|---------------|----|------|-----|-----|------|--------|------|----------|---------|-----|-----|
+| **Plain U-Net + PP** | 1ch | **0.855** | 0.052 | 0.751 | 0.849 | 0.875 | 0/15 | 12.5 | 17.4 | 0.756 | 0.917 |
+| Plain U-Net | 1ch | 0.850 | **0.049** | 0.743 | 0.840 | 0.874 | 5/15 | 12.6 | 18.4 | 0.756 | 0.911 |
+| Hybrid U-Net + PP | 2ch | 0.844 | 0.091 | 0.739 | **0.894** | 0.820 | 0/15 | 18.0 | **10.6** | 0.553 | 0.942 |
+| Soft Erosion Hybrid + PP | 2ch | 0.843 | 0.106 | 0.740 | 0.885 | 0.833 | 0/15 | 16.7 | 12.3 | 0.464 | 0.919 |
+| Hybrid U-Net | 2ch | 0.843 | 0.090 | 0.737 | 0.892 | 0.820 | 2/15 | 18.0 | 10.9 | 0.553 | 0.942 |
+| Soft Erosion Hybrid | 2ch | 0.840 | 0.106 | 0.735 | 0.880 | 0.832 | 3/15 | 16.8 | 12.9 | 0.464 | 0.919 |
+| OCT-F Backbone + PP | 1ch | 0.814 | 0.148 | 0.706 | 0.845 | 0.825 | 0/15 | 17.5 | 16.5 | 0.296 | 0.930 |
+| OCT-F Backbone | 1ch | 0.809 | 0.145 | 0.698 | 0.837 | 0.824 | 4/15 | 17.6 | 17.5 | 0.296 | 0.915 |
+| Modified OCT-F 2ch + PP | 2ch | 0.764 | 0.209 | 0.650 | 0.871 | 0.737 | 0/15 | 26.3 | 12.4 | 0.016 | 0.915 |
+| Modified OCT-F 2ch | 2ch | 0.759 | 0.205 | 0.641 | 0.854 | 0.741 | 10/15 | 25.9 | 14.6 | 0.014 | 0.912 |
+
+### Best, median and worst image
+| Run | Leading configuration | best | median | worst |
+|-----|----------------------|------|--------|-------|
+| 256 | Soft Erosion Hybrid + PP | scan_12, 0.924 | scan_08, 0.882 | scan_09, 0.678 |
+| Native | Plain U-Net + PP | scan_05, 0.917 | scan_14, 0.861 | scan_01, 0.756 |
+
+At 256 the best image is 1.17% of frame and the worst is 1.21% — nearly the same size.
+
+### Spread across subjects, raw predictions
+
+**256 x 256**
+
+Per-subject means are not reported here, because they describe the
+particular animals in the study rather than the method.
+
+**Native 496 x 768**
+
+Per-subject means are not reported here, because they describe the
+particular animals in the study rather than the method.
+
+Every subject except one sits between 0.73 and 0.92 at both resolutions.
+That single outlier is scan_09, and it is the image discussed below.
+
+### Post-processing effect
+| Model | 256: CC>1 raw → PP | Dice change | Native: CC>1 raw → PP | Dice change |
+|-------|--------------------|-------------|------------------------|-------------|
+| Plain U-Net | 1/15 → 0/15 | +0.001 | 5/15 → 0/15 | +0.005 |
+| Hybrid U-Net | 0/15 → 0/15 | +0.000 | 2/15 → 0/15 | +0.001 |
+| OCT-F Backbone | 3/15 → 0/15 | +0.005 | 4/15 → 0/15 | +0.005 |
+| Modified OCT-F 2ch | 4/15 → 0/15 | **−0.002** | 10/15 → 0/15 | +0.005 |
+| Soft Erosion Hybrid | 1/15 → 0/15 | +0.001 | 3/15 → 0/15 | +0.003 |
+
+### Post-processing on one image, added 2026-09-02
+
+The example figure in the supporting material. Plain U-Net at native resolution on validation image
+`scan_03`, read from `results/per_image_scores.pkl`.
+
+| | Components | Dice |
+|---|---|---|
+| Raw | 3 | **0.838** |
+| After post-processing | 1 | **0.845** |
+
+Change **+0.008**. Removing the two stray fragments did not cost overlap, because what was removed
+was never lesion.
+
+### Lesion size against Dice, correlation
+Across all twenty configurations — 256: 0.142 to 0.453, native: 0.259 to 0.572.
+
+**Refined 2026-08-27, and the wording matters.** With n = 15 the two-tailed 5% critical value of
+|r| is **0.514**. Tested on the ten post-processed configurations, **one clears it**: native Plain
+U-Net at **r = 0.572, p = 0.026**. The other nine do not.
+
+Testing ten configurations at the 5% level produces about one such result **by chance alone**, and
+that one **falls to r = 0.452, p = 0.105 — below the threshold — when the single hardest image
+for that configuration (scan_01, Dice 0.756) is removed**. Note this is not scan_09:
+Plain U-Net is the one model that handles that image, so its own worst case is a different one.
+
+**The defensible claim is therefore "no relationship can be established at n = 15", not "there is
+no relationship" and not "nothing is significant".** One configuration is nominally significant;
+it does not survive scrutiny. Figure `04_size_vs_dice.png` shows all ten against the threshold.
+
+### Probability map, one image of one model
+256, scan_12: 99.77% of pixels below 0.1 or above 0.9, 0.10% between 0.3 and 0.7.
+Native, scan_05: 99.73% and 0.10%. **One image of one model. Do not generalise.**
+
+### RCC8D
+Every configuration returns **PO** (partial overlap) on all 15 images, with two exceptions:
+Modified OCT-F 2ch + PP at 256 gives 1 TPPi, and both Modified OCT-F 2ch rows at native give
+1 NTPPi. Every prediction straddles the lesion boundary.
+
+**Cross-check against the published module** (Porter et al., 2024), leading native configuration,
+executed 2026-08-23: local implementation and published module agree on **15/15 images**, all PO.
+
+---
+
+## 6. Resolution comparison — notebook 04
+
+With post-processing unless stated.
+
+| Configuration | 256 | Native | Diff | 256 std | Nat std | 256 CC>1 | Nat CC>1 |
+|---------------|-----|--------|------|---------|---------|----------|----------|
+| Plain U-Net | 0.850 | 0.850 | −0.000 | 0.051 | 0.049 | 1/15 | 5/15 |
+| Plain U-Net + PP | 0.851 | 0.855 | −0.004 | 0.050 | 0.052 | 0/15 | 0/15 |
+| Hybrid U-Net | 0.863 | 0.843 | +0.020 | 0.046 | 0.090 | 0/15 | 2/15 |
+| Hybrid U-Net + PP | 0.863 | 0.844 | +0.019 | 0.046 | 0.091 | 0/15 | 0/15 |
+| OCT-F Backbone | 0.857 | 0.809 | +0.048 | 0.054 | 0.145 | 3/15 | 4/15 |
+| OCT-F Backbone + PP | 0.862 | 0.814 | +0.048 | 0.055 | 0.148 | 0/15 | 0/15 |
+| Modified OCT-F 2ch | 0.823 | 0.759 | +0.065 | 0.098 | 0.205 | 4/15 | 10/15 |
+| Modified OCT-F 2ch + PP | 0.821 | 0.764 | +0.057 | 0.117 | 0.209 | 0/15 | 0/15 |
+| Soft Erosion Hybrid | 0.866 | 0.840 | +0.027 | 0.059 | 0.106 | 1/15 | 3/15 |
+| Soft Erosion Hybrid + PP | 0.867 | 0.843 | +0.024 | 0.060 | 0.106 | 0/15 | 0/15 |
+
+### The one image that separates the runs — scan_09, with PP
+| Model | Native | 256 | Diff |
+|-------|--------|-----|------|
+| Plain U-Net | 0.802 | 0.713 | −0.089 |
+| Hybrid U-Net | 0.553 | 0.730 | +0.177 |
+| Soft Erosion Hybrid | 0.464 | 0.678 | +0.214 |
+| OCT-F Backbone | 0.296 | 0.677 | +0.381 |
+| Modified OCT-F 2ch | 0.016 | 0.409 | +0.393 |
+
+### Why that image is different, native, with PP
+Added 2026-08-31, to answer a review comment. Recomputed from
+`results/per_image_scores.pkl`.
+
+| Model | Dice | Precision | Recall |
+|-------|------|-----------|--------|
+| Plain U-Net | 0.802 | 0.796 | **0.808** |
+| Hybrid U-Net | 0.553 | 0.905 | 0.398 |
+| Soft Erosion Hybrid | 0.464 | 0.954 | 0.307 |
+| OCT-F Backbone | 0.296 | 0.786 | 0.182 |
+| Modified OCT-F 2ch | 0.016 | **1.000** | **0.008** |
+
+**Precision holds or rises while recall collapses.** The four failing models do not mislocate the
+lesion, they find a fragment of it and stop. Modified OCT-F 2ch is correct about every pixel it
+labels and labels almost none.
+
+**Size does not explain it.** The lesion is 4,683 px, **1.23% of the frame**, which ranks **12th of
+the 15** validation images by area. The smallest, scan_01 at 0.80%, is segmented well by every
+model. Set mean 7,626 px, median 7,701 px.
+
+Plain U-Net is the only one of the five that neither receives the residual nor inherits the
+pretrained encoder, and the only one that holds. Every modification that helps on average hurts on
+this image, and all of them hurt by under-segmenting.
+
+### Same comparison with that image removed, n = 14, with PP
+| Model | Native | 256 | Diff |
+|-------|--------|-----|------|
+| Plain U-Net | 0.859 | 0.861 | +0.002 |
+| Hybrid U-Net | 0.865 | 0.873 | +0.008 |
+| Soft Erosion Hybrid | 0.870 | 0.880 | +0.011 |
+| OCT-F Backbone | 0.850 | 0.875 | +0.025 |
+| Modified OCT-F 2ch | 0.817 | 0.851 | +0.034 |
+
+About half of each gap in the first table comes from that single image. On the other 14, Plain
+U-Net ranks **third** at native, behind Soft Erosion (0.870) and Hybrid (0.865).
+
+### Two-channel effect
+Dice difference, per-image hard Dice with post-processing, from section 5.
+
+| Pair | Old 256, broken split | Clean 256 | Native |
+|------|----------------------|-----------|--------|
+| Hybrid − Plain | +0.071 | **+0.012** | **−0.011** |
+| Modified OCT-F − OCT-F | +0.025 | **−0.041** | **−0.050** |
+
+**Corrected 2026-08-30.** The native column previously read −0.005 and −0.017.
+Those were the training-loop validation Dice from section 4 (0.8413 − 0.8465 and
+0.7908 − 0.8075), not the reportable numbers, so the two columns of one table were
+computed from different sources. The paper and the report state this result through precision
+and recall from section 5 and never quoted the withdrawn pair, so the defect did not spread.
+
+### Paired comparisons, added 2026-09-01
+
+Computed from `results/per_image_scores.pkl`, post-processed Dice, n = 15. Every model is scored on
+the **same** 15 images, so the comparisons are paired. A paired test removes the between-image
+variance, which dominates here because lesions vary twelve-fold in size and a hard image is hard for
+every model.
+
+**The pairing is worth 26% of the noise.** For Plain against Hybrid U-Net at native resolution the
+paired standard error is **0.0206** against **0.0280** unpaired.
+
+Two-tailed p values, Wilcoxon signed-rank in brackets:
+
+| Controlled pair | Native | 256 |
+|-----------------|--------|-----|
+| The residual, from scratch (Plain vs Hybrid) | 0.588 (0.639) | 0.279 (0.169) |
+| The residual, pretrained (OCT-F vs Modified) | 0.057 (0.064) | 0.052 (**0.035**) |
+| The loss function only (Hybrid vs Soft Erosion) | 0.911 (0.679) | 0.581 (0.599) |
+| Pretraining (Plain vs OCT-F Backbone) | 0.290 (0.421) | 0.316 (0.454) |
+
+Resolution, same model at both input sizes:
+
+| Model | Paired t | Wilcoxon |
+|-------|----------|----------|
+| Plain U-Net | 0.749 | 0.639 |
+| Hybrid U-Net | 0.228 | 0.524 |
+| OCT-F Backbone | 0.104 | 0.135 |
+| Modified OCT-F 2ch | 0.060 | **0.035** |
+| Soft Erosion Hybrid | 0.149 | 0.208 |
+
+**Two of thirteen comparisons fall below 0.05, both involving Modified OCT-F 2ch, and thirteen tests
+at the 5% level produce about one such result by chance.** Neither survives a multiple-comparison
+correction. The defensible claim is unchanged and now rests on a test rather than a heuristic: no
+controlled pair is distinguishable at n = 15.
+
+### Statistical caveat, applies to every comparison above
+n = 15, one seed, no repeats. Standard error is about **0.013**, so differences below roughly
+**0.026** are not distinguishable. Only the two OCT-F resolution gaps clear that bar by a margin;
+Soft Erosion Hybrid without post-processing sits exactly on it at 0.027.
+
+---
+
+## 7. Connectivity — notebook 05
+
+### Fragmented predictions, before post-processing
+| Model | 256 | Native | Max blobs 256 | Max blobs native |
+|-------|-----|--------|---------------|------------------|
+| Plain U-Net | 1/15 | 5/15 | 2 | 3 |
+| Hybrid U-Net | **0/15** | 2/15 | 1 | 2 |
+| OCT-F Backbone | 3/15 | 4/15 | 2 | 3 |
+| Modified OCT-F 2ch | 4/15 | 10/15 | 3 | 3 |
+| Soft Erosion Hybrid | 1/15 | 3/15 | 2 | 3 |
+| **Total** | **9/75** | **24/75** | | |
+
+After post-processing every model reaches **0/15** at both resolutions.
+
+### Four connectivity approaches
+| Approach | 256 CC>1 | Nat CC>1 | 256 Dice | Nat Dice | Differentiable |
+|----------|----------|----------|----------|----------|----------------|
+| No constraint (Dice+BCE) | 0/15 | 2/15 | 0.863 | 0.843 | n/a |
+| Erosion penalty in the loss | 1/15 | 3/15 | 0.866 | 0.840 | yes |
+| Post-processing after training | 0/15 | 0/15 | 0.863 | 0.844 | no |
+| Erosion penalty + post-processing | 0/15 | 0/15 | 0.867 | 0.843 | partly |
+
+**The erosion penalty adds one fragmented image at both resolutions.** Post-processing removes
+them all at both. Same conclusion from two independent runs.
+
+### Soft erosion penalty against fragment count
+| Fragments | Kernel 5 (256) | increase | Kernel 9 (native) | increase |
+|-----------|----------------|----------|-------------------|----------|
+| 1 | 0.020508 | – | 0.039714 | – |
+| 2 | 0.021810 | +6.3% | 0.041178 | +3.7% |
+| 3 | 0.023112 | +12.7% | 0.042643 | +7.4% |
+| 5 | 0.025716 | +25.4% | 0.045573 | +14.8% |
+
+The kernel-9 baseline is nearly double the kernel-5 baseline because a larger kernel erodes more
+of the main blob. Fragments are therefore a smaller share of the signal at native, which is a
+mechanism for why the penalty is weaker there.
+
+### Why the penalty is too weak, the arithmetic
+Verified 2026-08-31 by rerunning the synthetic shapes. Frame **24,576 px** (128 x 192), main blob
+4,000 px, each added fragment 6 x 6 = 36 px.
+
+| Quantity | Kernel 5 | Kernel 9 |
+|----------|----------|----------|
+| Erosion shell of the main blob | **504 px** | **976 px** |
+| Baseline penalty | 0.020508 | 0.039714 |
+| Rise per added fragment | **0.001302** | **0.001465** |
+| That rise as a share of baseline | 6.3% | 3.7% |
+
+At kernel 5 a 36 px fragment keeps 4 px and so adds 32; at kernel 9 it is erased outright and adds
+all 36. **Being erased completely is the largest contribution a fragment can make**, so a fragment
+smaller than the kernel costs the most, not the least. The share nonetheless falls as the kernel
+grows, because the shell it is measured against grows faster.
+
+Against the whole loss, at kernel 5:
+
+| Term | Value |
+|------|-------|
+| Rise per fragment | 0.001302 |
+| Erosion weight | 0.2 |
+| **Cost of a fragment** | **0.00026** |
+| Dice gap on the image examined | 0.028 |
+| Dice + BCE weight | 0.8 |
+| **Value of the overlap** | **0.0224** |
+| **Ratio** | **about 86 to 1** |
+
+The overlap term outweighs the connectivity term by about 86 to 1, so the model accepts a second
+component whenever that buys any overlap at all.
+
+### Erosion applied to a real fragmented prediction
+256, Modified OCT-F 2ch on scan_02: 3 components before, **2 after**.
+Native, Modified OCT-F 2ch on scan_03: 2 components before, **2 after** — the fragment is
+wider than the 9x9 kernel and survives unchanged.
+
+### Why a blob count cannot be a loss
+`cv2.connectedComponents` returns a plain float (26 components in the demo), not a tensor, so
+`.backward()` cannot be called. Soft erosion returns a tensor (loss 0.489525) and the gradient
+reaches the input (magnitude 0.000468).
+
+### Compactness, three synthetic shapes
+Circle, area 3,853, compactness **1.67**. Elongated lesion, area 2,880, **2.29**. Fragmented
+lesion, area 2,592, **2.99**. Fragmentation scores worst, but an ordinary elongated lesion is
+already penalised most of the way there.
+
+---
+
+## 8. Numbers that must NOT be used
+
+| Number | Why |
+|--------|-----|
+| Any figure from the old 256x256 run | Split inconsistency: Plain and Hybrid U-Net trained under seed 40494109 but evaluated under seed 42, so 13 of 15 "validation" images were training images. Replaced by section 5. |
+| Two-channel gains of +0.071 and +0.025 | Inflated by that split bug. Correct values are +0.012 and −0.041. |
+| Plain U-Net std 0.221 | From the old 256 run. The clean 256 value is **0.050**. |
+| "6x amplification" of the residual | Measured on the wrong channel. 6.954 is the **image's** lesion contrast. The residual is 1.675, i.e. 0.241x relative. |
+| "Native geometry helps the pretrained encoder" | Retracted. OCT-F Backbone scores 0.862 at 256, where the image is squashed hardest, against 0.814 at native. The claim came from a capped 512x512 run that never converged. |
+| "~2.5 hours of GPU training" | A planning estimate. Actual: 7.2 minutes at native, 3.1 at 256. |
+| Compactness 0.803 → 0.515, and 1x1 projection 0.471 | Earlier 256x256 experiments, kept as history. Not reproduced under the current protocol. |
+
+## 9. Recorded elsewhere but not reproduced by the current notebooks
+
+These appear in `findings_log.md` from earlier runs and are **not** printed by any current
+notebook cell. Verify before use.
+
+Nothing is currently outstanding.
+
+*(The RCC8D 15/15 agreement was previously listed here. It was executed on 2026-08-23 and is now
+verified: see section 5.)*
+
+*(The held-out SSIM split by study was previously listed here. It was verified on 2026-08-30
+directly from `fine_tuned_reconstruction.pth` and now appears in section 2.)*
+
+---
+
+## 10. Repository inventory
+
+Remeasured 2026-08-31 from the submitted code repository, the repository pushed to QUB EEECS
+GitLab. Sizes are the sum of file bytes, so they are smaller than `du`, which reports disk
+allocation.
+
+**The study's imaging data is not in the repository.** Dr Gault settled that on 2026-08-31. What
+ships is the code, the notebooks with their outputs, the trained weights, the third-party OCT-F
+source, and six sample scans.
+
+**The six sample scans were added 2026-08-31, after that decision.** They are two endpoint scans,
+the expert annotation of each, and the QC baseline of the same eye, held in `demo/sample_data/` so the
+demonstration can be run without access to the study set. They are 6 of the 266 scans, 6.5 MB
+against the 363.4 MB withdrawn. This is a partial reversal of the data decision and is recorded
+here as such.
+
+| Group | Files | Size |
+|-------|-------|------|
+| Whole repository | **110** | **703 MB** |
+| Weight files, `*.pth` | 12 | 567.6 MB |
+| Caches, `*.pkl` | 2 | 107.6 MB |
+| Images, `*.png` | 58 | 12.6 MB |
+| Notebooks, `*.ipynb` | 9 | 8.8 MB |
+| Sample scans, `*.tif` | 6 | 6.5 MB |
+| Python, `*.py` | 13 | 0.1 MB |
+
+*(Remeasured 2026-09-01. The count is unchanged because the changes cancel:
+`demo.ipynb` added and `demo_on_your_image.png` removed from `notebooks_outputs/`,
+where it was not a notebook output. The README was shortened from 200 lines to
+131 and stays `README.md`, since GitLab renders that on the project page and does
+not render a `.txt`. The repository carries two markdown files, its README and
+the third-party OCT-F README.)*
+
+The three largest single files: the original OCT-F checkpoint **269.3 MB**, `residual_cache.pkl`
+**107.5 MB**, `fine_tuned_reconstruction.pth` **89.8 MB**.
+
+*(The 2026-08-30 measurement, 520 files and 1,064 MB, described the repository while it still
+carried 340 scans at 363.4 MB. Superseded.)*
+
+### Where the files sit
+| Folder | Contents |
+|--------|----------|
+| `demo/demo.py` | run any model on your own image, with or without a ground truth |
+| `demo/demo.ipynb` | the same, step by step, importing the functions from `demo.py` |
+| `demo/` | `demo.py`, `demo.ipynb`, and `sample_data/`: 2 endpoint scans, their annotations, 2 QC baselines |
+| `reconstruction/checkpoints/` | 5 segmentation models, 496 x 768 |
+| `reconstruction/checkpoints_256/` | 5 segmentation models, 256 x 256 |
+| `reconstruction/OCT-F_Reconstruction/` | third-party source, original checkpoint, README |
+| `notebooks/` | the 5 analysis notebooks |
+| `notebooks_outputs/` | 46 figures |
+| `gpu_notebooks/` | 3 executed training notebooks, 3 Slurm scripts |
+| `gpu_outputs/` | 10 training curves |
+| `code/` | 7 modules including `verify_numbers.py` |
+| `results/` | `NUMBERS.txt`, `per_image_scores.csv`, `per_image_scores.pkl` |
+
+Figures total **56**: 46 from the analysis notebooks plus 10 training curves. The other 2 PNGs
+counted above ship inside the OCT-F source.
+
+### The analysis notebooks, as committed
+**338 cells, of which 166 are code**, every one executed with output.
+
+| Notebook | Cells | Code |
+|----------|-------|------|
+| 01 data exploration | 54 | 31 |
+| 02 reconstruction | 41 | 21 |
+| 03 training review | 46 | 21 |
+| 04 evaluation | 114 | 53 |
+| 05 connectivity | 83 | 40 |
+
+*(An earlier count of 364 cells and 206 code cells was recorded before the notebook rebuild and is
+superseded. The two copies of the notebooks, in the repository's `notebooks/` and
+`QUB_EEECS_GitLab/notebooks/`, are byte-identical.)*

@@ -1,0 +1,24 @@
+# The private imaging data and anything trained on it never belong in this repository.
+data/
+*.tif
+*.tiff
+*.e2e
+*.E2E
+*.vol
+sample_data/
+
+# Model weights. Trained on the private study images, so they stay out.
+*.pth
+*.pt
+reconstruction/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# OS
+Thumbs.db
+.DS_Store
