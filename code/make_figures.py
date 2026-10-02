@@ -1,16 +1,12 @@
-"""Build the figures used in the README.
+"""Build the three figures used in the README.
 
     python code/make_figures.py
 
-Three figures. The first two are schematics, of the method and of the five
-model variants, drawn here rather than in a diagramming tool so they stay in
-version control and can be corrected like any other source file.
+The first two are diagrams of the method and of the five models. The third is
+built from results/per_image_scores.csv, so it always matches the numbers that
+verify_numbers.py checks.
 
-The third is built from results/per_image_scores.csv rather than typed in, so
-it cannot drift away from the numbers verify_numbers.py checks.
-
-None of them shows a scan. The imaging data used in this study is private, so
-the method has to be carried by the schematics and by the measurements.
+No figure shows a scan. The imaging data is private.
 """
 
 import csv

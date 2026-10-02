@@ -74,7 +74,7 @@ Smallest: two views of one lesion, both at 0.75%.
 
 ---
 
-## 2. Reconstruction and fine-tuning — notebook 02
+## 2. Reconstruction and fine-tuning, notebook 02
 
 | Setting | Value |
 |---------|-------|
@@ -123,7 +123,7 @@ adds no new information.
 
 ---
 
-## 3. Models — notebook 03
+## 3. Models, notebook 03
 
 Identical in both runs.
 
@@ -145,7 +145,7 @@ Kernels: 256 uses PP 15 and erosion 5; native uses PP 29 and erosion 9.
 
 ---
 
-## 4. Training behaviour — notebook 03
+## 4. Training behaviour, notebook 03
 
 Training-loop values, averaged over validation batches. **These drove early stopping; they are
 not the reportable segmentation numbers.** Use section 5 for those.
@@ -175,7 +175,7 @@ every result is converged.
 
 ---
 
-## 5. Segmentation quality — notebook 04
+## 5. Segmentation quality, notebook 04
 
 **These are the reportable numbers.** Per-image hard Dice after thresholding at 0.5,
 macro-averaged over the 15 held-out images.
@@ -214,7 +214,7 @@ macro-averaged over the 15 held-out images.
 | 256 | Soft Erosion Hybrid + PP | scan_12, 0.924 | scan_08, 0.882 | scan_09, 0.678 |
 | Native | Plain U-Net + PP | scan_05, 0.917 | scan_14, 0.861 | scan_01, 0.756 |
 
-At 256 the best image is 1.17% of frame and the worst is 1.21% — nearly the same size.
+At 256 the best image is 1.17% of frame and the worst is 1.21%, nearly the same size.
 
 ### Spread across subjects, raw predictions
 
@@ -254,14 +254,14 @@ Change **+0.008**. Removing the two stray fragments did not cost overlap, becaus
 was never lesion.
 
 ### Lesion size against Dice, correlation
-Across all twenty configurations — 256: 0.142 to 0.453, native: 0.259 to 0.572.
+Across all twenty configurations, 256: 0.142 to 0.453, native: 0.259 to 0.572.
 
 **Refined 2026-08-27, and the wording matters.** With n = 15 the two-tailed 5% critical value of
 |r| is **0.514**. Tested on the ten post-processed configurations, **one clears it**: native Plain
 U-Net at **r = 0.572, p = 0.026**. The other nine do not.
 
 Testing ten configurations at the 5% level produces about one such result **by chance alone**, and
-that one **falls to r = 0.452, p = 0.105 — below the threshold — when the single hardest image
+that one **falls to r = 0.452, p = 0.105, below the threshold, when the single hardest image
 for that configuration (scan_01, Dice 0.756) is removed**. Note this is not scan_09:
 Plain U-Net is the one model that handles that image, so its own worst case is a different one.
 
@@ -283,7 +283,7 @@ executed 2026-08-23: local implementation and published module agree on **15/15 
 
 ---
 
-## 6. Resolution comparison — notebook 04
+## 6. Resolution comparison, notebook 04
 
 With post-processing unless stated.
 
@@ -300,7 +300,7 @@ With post-processing unless stated.
 | Soft Erosion Hybrid | 0.866 | 0.840 | +0.027 | 0.059 | 0.106 | 1/15 | 3/15 |
 | Soft Erosion Hybrid + PP | 0.867 | 0.843 | +0.024 | 0.060 | 0.106 | 0/15 | 0/15 |
 
-### The one image that separates the runs — scan_09, with PP
+### The one image that separates the runs, scan_09, with PP
 | Model | Native | 256 | Diff |
 |-------|--------|-----|------|
 | Plain U-Net | 0.802 | 0.713 | −0.089 |
@@ -400,7 +400,7 @@ Soft Erosion Hybrid without post-processing sits exactly on it at 0.027.
 
 ---
 
-## 7. Connectivity — notebook 05
+## 7. Connectivity, notebook 05
 
 ### Fragmented predictions, before post-processing
 | Model | 256 | Native | Max blobs 256 | Max blobs native |
@@ -428,7 +428,7 @@ them all at both. Same conclusion from two independent runs.
 ### Soft erosion penalty against fragment count
 | Fragments | Kernel 5 (256) | increase | Kernel 9 (native) | increase |
 |-----------|----------------|----------|-------------------|----------|
-| 1 | 0.020508 | – | 0.039714 | – |
+| 1 | 0.020508 | - | 0.039714 | - |
 | 2 | 0.021810 | +6.3% | 0.041178 | +3.7% |
 | 3 | 0.023112 | +12.7% | 0.042643 | +7.4% |
 | 5 | 0.025716 | +25.4% | 0.045573 | +14.8% |
@@ -470,7 +470,7 @@ component whenever that buys any overlap at all.
 
 ### Erosion applied to a real fragmented prediction
 256, Modified OCT-F 2ch on scan_02: 3 components before, **2 after**.
-Native, Modified OCT-F 2ch on scan_03: 2 components before, **2 after** — the fragment is
+Native, Modified OCT-F 2ch on scan_03: 2 components before, **2 after**, the fragment is
 wider than the 9x9 kernel and survives unchanged.
 
 ### Why a blob count cannot be a loss

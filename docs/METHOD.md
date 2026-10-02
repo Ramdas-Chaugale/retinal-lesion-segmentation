@@ -13,17 +13,17 @@ how each lesion changes.
 
 Measuring them is the slow part. A scientist opens each scan and outlines every lesion by hand, one
 at a time. The work is repetitive, it takes hours, and two people outlining the same lesion will
-not produce the same boundary. That variability is not only an inconvenience: it widens the spread
-of the measurements, which means a study needs more animals to detect the same effect.
+not produce the same boundary. That variability matters: it widens the spread of the
+measurements, which means a study needs more animals to detect the same effect.
 
 This project replaces that manual step with a segmentation model that outlines the lesions
-automatically, and treats the choice of model as a question to be answered rather than assumed.
-Five designs are compared under identical conditions: a standard U-Net, a version that also
+automatically. Rather than picking one model and assuming it is the right one, five designs are
+compared under the same conditions: a standard U-Net, a version that also
 receives a reconstruction residual as a second input, two built on a pretrained retinal foundation
 model at a quarter of the parameters, and one trained with a connectivity penalty in its loss.
 
-The honest answer is that the differences between most of them are smaller than the noise, and this
-repository says so and shows the arithmetic. Two of the ideas that were expected to help did not,
+The honest answer is that the differences between most of them are smaller than the noise, and
+this repository says so and shows the working. Two of the ideas that were expected to help did not,
 and both are reported with the measurements that show why.
 
 ## The five models

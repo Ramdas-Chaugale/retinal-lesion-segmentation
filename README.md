@@ -1,6 +1,6 @@
 # Retinal Lesion Segmentation in OCT
 
-Finding laser-induced lesions in retinal OCT B-scans, automatically.
+Automatically finding laser-induced lesions in retinal OCT B-scans.
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.12-EE4C2C?logo=pytorch&logoColor=white)
@@ -8,17 +8,17 @@ Finding laser-induced lesions in retinal OCT B-scans, automatically.
 
 In preclinical retinal research these lesions are measured by hand: a scientist outlines each one
 on screen, scan by scan. It is slow, and two people outlining the same lesion do not draw the same
-boundary. This replaces that step with a segmentation model, and treats the choice of model as a
-question to be answered rather than assumed.
+boundary. This project replaces that step with a segmentation model, and compares five of them to see
+which one actually works better.
 
-**0.850 Dice on held-out scans.** The more useful result is that two ideas expected to beat it did
-not, and the measurements showing why are in here.
+**0.850 Dice on held-out scans.** Two ideas that were expected to beat it did not, and the
+measurements that show why are here.
 
 ![Method pipeline](figures/pipeline.png)
 
 A reconstruction model is fine-tuned on healthy baseline scans, so the difference between a
 lesioned scan and its reconstruction becomes a map of where the retina departs from normal. That
-residual is offered to the models as a second input channel. Five models then train on the same
+residual is given to the models as a second input channel. Five models then train on the same
 split and are scored on the same 15 held-out scans.
 
 ## Results
@@ -42,7 +42,8 @@ than roughly 0.026 cannot be told apart, and almost every gap in that table is s
 **The residual moves error around rather than removing it.** Precision climbs from 0.840 to 0.892,
 recall drops from 0.874 to 0.820, overlap barely changes.
 
-**The pretrained encoder is the practical win.** 0.809 Dice with a quarter of the parameters.
+**The pretrained encoder is the most practical option.** It reaches 0.809 Dice using a quarter of
+the parameters.
 
 ## What was delivered
 
@@ -50,15 +51,15 @@ A command-line tool the research partner runs on new scans. Point it at an image
 outlines every lesion it finds, writes an overlay, and reports the lesion area as a percentage of
 the frame. Give it the expert mask as well and it scores itself, and writes a second image in three
 colours: yellow where it agrees, green for lesion it missed, red for tissue it wrongly included.
-That last picture is the useful one, because it says which way the model errs.
+That last picture is the useful one, because it shows which way the model gets it wrong.
 
 ```
 python demo/demo.py --image scan.png --truth mask.png --model hybrid
 ```
 
 **The trained weights are not in this repository.** They were fitted to private imaging data, so
-they stay with the partner alongside the scans. `demo/demo.py` is the tool itself and documents
-exactly what it does, but it needs weights to run.
+they stay with the partner alongside the scans. The script is here so you can read what it does, but it
+needs those weights to run.
 
 ## What you can run here
 
@@ -67,8 +68,8 @@ pip install -r requirements.txt
 python code/verify_numbers.py
 ```
 
-No data, no GPU, no download, nothing private. It recomputes every number in this README from the
-stored per-image scores and checks each one, so the results above can be audited by anyone.
+This needs no data, no GPU and no download. It recomputes every number in this README from the
+stored per-image scores and checks each one, so anyone can check the results above.
 
 ## What is in here
 
