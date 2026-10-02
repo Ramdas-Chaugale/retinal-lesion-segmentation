@@ -21,6 +21,10 @@ lesioned scan and its reconstruction becomes a map of where the retina departs f
 residual is given to the models as a second input channel. Five models then train on the same
 split and are scored on the same 15 held-out scans.
 
+> This page is the short version. The full write-up is in **[docs/METHOD.md](docs/METHOD.md)**: why
+> each model was built the way it was, what the comparison showed, and how to run this on a
+> different dataset.
+
 ## Results
 
 Full resolution, 496 x 768, on 15 held-out scans.
@@ -81,9 +85,8 @@ demo/          run a trained model on a scan
 results/       per-image scores and the canonical numbers
 ```
 
-**[docs/METHOD.md](docs/METHOD.md)** is the long version: why each model was built the way it was,
-what the comparison actually showed, and how to run this on a different dataset.
-Every number is recorded in [results/NUMBERS.txt](results/NUMBERS.txt).
+The full write-up is in [docs/METHOD.md](docs/METHOD.md). Every number is recorded in
+[results/NUMBERS.txt](results/NUMBERS.txt).
 
 ## Honest limits
 
