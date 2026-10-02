@@ -44,17 +44,31 @@ recall drops from 0.874 to 0.820, overlap barely changes.
 
 **The pretrained encoder is the practical win.** 0.809 Dice with a quarter of the parameters.
 
-## Try it
+## What was delivered
+
+A command-line tool the research partner runs on new scans. Point it at an image or a folder and it
+outlines every lesion it finds, writes an overlay, and reports the lesion area as a percentage of
+the frame. Give it the expert mask as well and it scores itself, and writes a second image in three
+colours: yellow where it agrees, green for lesion it missed, red for tissue it wrongly included.
+That last picture is the useful one, because it says which way the model errs.
+
+```
+python demo/demo.py --image scan.png --truth mask.png --model hybrid
+```
+
+**The trained weights are not in this repository.** They were fitted to private imaging data, so
+they stay with the partner alongside the scans. `demo/demo.py` is the tool itself and documents
+exactly what it does, but it needs weights to run.
+
+## What you can run here
 
 ```
 pip install -r requirements.txt
 python code/verify_numbers.py
 ```
 
-No data, no GPU, no download. It recomputes every number above from the stored per-image scores and
-checks each one. Every figure quoted here comes out of that script.
-
-Run a model on your own image with `python demo/demo.py --image yourscan.png`.
+No data, no GPU, no download, nothing private. It recomputes every number in this README from the
+stored per-image scores and checks each one, so the results above can be audited by anyone.
 
 ## What is in here
 
@@ -69,12 +83,11 @@ docs/METHOD.md the long version: design decisions, and running this on your own 
 
 ## Honest limits
 
-The imaging data used in this study is private, so no scan, annotation or trained weight is
-included here. OCT-F, the reconstruction model by Haider et al., is withheld until its authors
-publish; the segmentation networks take the pretrained encoder as an argument, so `architectures.py`
-stands alone.
+OCT-F, the reconstruction model by Haider et al., is withheld until its authors publish. The
+segmentation networks take the pretrained encoder as an argument rather than importing it, so
+`architectures.py` stands alone.
 
-These weights were fitted to preclinical OCT from one study, annotated by one person. Applied to
+The models were fitted to preclinical OCT from one study, annotated by one person. Applied to
 anything else, a number from this repository illustrates the method rather than reporting a result.
 
 **No animal procedures were carried out for this project.** The scans predate it, collected under
