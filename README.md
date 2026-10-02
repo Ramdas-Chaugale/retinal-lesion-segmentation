@@ -78,8 +78,11 @@ notebooks/     the analysis, 02 to 05
 gpu_notebooks/ the three training runs
 demo/          run a trained model on a scan
 results/       per-image scores and the canonical numbers
-docs/METHOD.md the long version: design decisions, and running this on your own data
 ```
+
+**[docs/METHOD.md](docs/METHOD.md)** is the long version: why each model was built the way it was,
+what the comparison actually showed, and how to run this on a different dataset.
+Every number is recorded in [results/NUMBERS.txt](results/NUMBERS.txt).
 
 ## Honest limits
 
