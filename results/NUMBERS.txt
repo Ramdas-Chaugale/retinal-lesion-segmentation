@@ -514,73 +514,42 @@ directly from `fine_tuned_reconstruction.pth` and now appears in section 2.)*
 
 ## 10. Repository inventory
 
-Remeasured 2026-08-31 from the submitted code repository, the repository pushed to QUB EEECS
-GitLab. Sizes are the sum of file bytes, so they are smaller than `du`, which reports disk
-allocation.
+Measured from this repository as published. Sizes are the sum of file bytes.
 
-**The study's imaging data is not in the repository.** Dr Gault settled that on 2026-08-31. What
-ships is the code, the notebooks with their outputs, the trained weights, the third-party OCT-F
-source, and six sample scans.
+**No scan, no annotation and no trained weight is distributed here.** The study's
+imaging data belongs to the industry partner and stays with them. The figures in
+this repository are diagrams, training curves and score distributions, none of
+which contain image data. The notebooks are committed with their code and
+markdown but without their output images.
 
-**The six sample scans were added 2026-08-31, after that decision.** They are two endpoint scans,
-the expert annotation of each, and the QC baseline of the same eye, held in `demo/sample_data/` so the
-demonstration can be run without access to the study set. They are 6 of the 266 scans, 6.5 MB
-against the 363.4 MB withdrawn. This is a partial reversal of the data decision and is recorded
-here as such.
+This is also why `demo.py` cannot be run end to end from a fresh clone: there are
+no weights to load. It is included so the method can be read and so the partner,
+who does hold the weights and the scans, can run it.
 
 | Group | Files | Size |
 |-------|-------|------|
-| Whole repository | **110** | **703 MB** |
-| Weight files, `*.pth` | 12 | 567.6 MB |
-| Caches, `*.pkl` | 2 | 107.6 MB |
-| Images, `*.png` | 58 | 12.6 MB |
-| Notebooks, `*.ipynb` | 9 | 8.8 MB |
-| Sample scans, `*.tif` | 6 | 6.5 MB |
-| Python, `*.py` | 13 | 0.1 MB |
-
-*(Remeasured 2026-09-01. The count is unchanged because the changes cancel:
-`demo.ipynb` added and `demo_on_your_image.png` removed from `notebooks_outputs/`,
-where it was not a notebook output. The README was shortened from 200 lines to
-131 and stays `README.md`, since GitLab renders that on the project page and does
-not render a `.txt`. The repository carries two markdown files, its README and
-the third-party OCT-F README.)*
-
-The three largest single files: the original OCT-F checkpoint **269.3 MB**, `residual_cache.pkl`
-**107.5 MB**, `fine_tuned_reconstruction.pth` **89.8 MB**.
-
-*(The 2026-08-30 measurement, 520 files and 1,064 MB, described the repository while it still
-carried 340 scans at 363.4 MB. Superseded.)*
+| Whole repository | **34** | **1.5 MB** |
+| Python modules | 9 | 69 KB |
+| Figures | 9 | 1.0 MB |
+| Notebooks | 8 | 306 KB |
+| Markdown | 2 | 12 KB |
+| Text | 2 | 28 KB |
+| Git config | 1 | 0 KB |
+| Licence | 1 | 1 KB |
+| Per-image scores, CSV | 1 | 28 KB |
+| Per-image scores, pickle | 1 | 29 KB |
 
 ### Where the files sit
 | Folder | Contents |
 |--------|----------|
-| `demo/demo.py` | run any model on your own image, with or without a ground truth |
-| `demo/demo.ipynb` | the same, step by step, importing the functions from `demo.py` |
-| `demo/` | `demo.py`, `demo.ipynb`, and `sample_data/`: 2 endpoint scans, their annotations, 2 QC baselines |
-| `reconstruction/checkpoints/` | 5 segmentation models, 496 x 768 |
-| `reconstruction/checkpoints_256/` | 5 segmentation models, 256 x 256 |
-| `reconstruction/OCT-F_Reconstruction/` | third-party source, original checkpoint, README |
-| `notebooks/` | the 5 analysis notebooks |
-| `notebooks_outputs/` | 46 figures |
-| `gpu_notebooks/` | 3 executed training notebooks, 3 Slurm scripts |
-| `gpu_outputs/` | 10 training curves |
-| `code/` | 7 modules including `verify_numbers.py` |
-| `results/` | `NUMBERS.txt`, `per_image_scores.csv`, `per_image_scores.pkl` |
+| `code/` | the 7 shared modules plus `make_figures.py` and `verify_numbers.py` |
+| `notebooks/` | the 4 analysis notebooks |
+| `gpu_notebooks/` | the 3 executed training notebooks |
+| `demo/` | `demo.py` and `demo.ipynb` |
+| `docs/` | `METHOD.md`, the long-form method |
+| `figures/` | 9 figures, all diagrams or plots |
+| `results/` | this file, plus per-image scores as CSV and pickle |
 
-Figures total **56**: 46 from the analysis notebooks plus 10 training curves. The other 2 PNGs
-counted above ship inside the OCT-F source.
-
-### The analysis notebooks, as committed
-**338 cells, of which 166 are code**, every one executed with output.
-
-| Notebook | Cells | Code |
-|----------|-------|------|
-| 01 data exploration | 54 | 31 |
-| 02 reconstruction | 41 | 21 |
-| 03 training review | 46 | 21 |
-| 04 evaluation | 114 | 53 |
-| 05 connectivity | 83 | 40 |
-
-*(An earlier count of 364 cells and 206 code cells was recorded before the notebook rebuild and is
-superseded. The two copies of the notebooks, in the repository's `notebooks/` and
-`QUB_EEECS_GitLab/notebooks/`, are byte-identical.)*
+*(An earlier version of this section described the separate repository submitted
+to QUB EEECS GitLab, which carried trained weights and sample scans. It did not
+describe this one and has been replaced.)*
